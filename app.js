@@ -117,6 +117,7 @@ app.get('/', function (req, res) {
   res.send('Teampulse server!')
 })
 
-app.listen(3999, function () {
+var port = process.env.PORT || 3999;
+app.listen(port, function () {
   console.log('Example app listening on port 3999!')
 })
