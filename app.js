@@ -5,7 +5,7 @@ var Twitter = require('twitter');
 var graph = require('fbgraph');
 var fetch = require('node-fetch');
 var dotenv = require('dotenv').config()
-
+var Flickr = require("flickrapi");
 
 var corsOptions = {
   origin: 'http://example.com',
@@ -30,7 +30,6 @@ fetch('https://api.instagram.com/v1/users/self/media/liked?access_token='+proces
 /*****************
   FLICKR
 ******************/
-var Flickr = require("flickrapi");
 var flickrOptions = {
   api_key: process.env.FLICKR_API_KEY,
   secret: process.env.FLICKR_SECRET
@@ -119,5 +118,5 @@ app.get('/', function (req, res) {
 
 var port = process.env.PORT || 3999;
 app.listen(port, function () {
-  console.log('Example app listening on port 3999!')
+  console.log('Example app listening on port '+port)
 })
