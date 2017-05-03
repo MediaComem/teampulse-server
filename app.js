@@ -8,7 +8,7 @@ var dotenv = require('dotenv').config()
 var Flickr = require("flickrapi");
 
 var corsOptions = {
-  origin: 'http://example.com',
+  origin: 'https://mediacomem.github.io',
   optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204 
 }
 
@@ -83,14 +83,16 @@ var graphObject = graph
 /*****************
   TEAMPULSE API
 ******************/
+var fakedata = {"contestant":"CYCLIST_002","latitude":46.764446,"longitude":6.646111,"numberMinutes":30,"avgSpeed":8.780640602111816,"avgCadence":40.0,"avgPower":50.0002326965332}
 var teampulseData;
-fetch('https://data.teampulse.ch/raam/informations')
-  .then(function(response) {
-    return response.json()
-  })
-  .then(function(body){
-    teampulseData = body;
-  });
+teampulseData = fakedata;
+// fetch('https://data.teampulse.ch/raam/informations')
+//   .then(function(response) {
+//     return response.json()
+//   })
+//   .then(function(body){
+//     teampulseData = fakedata;
+//   });
 
 /*****************
   ROUTES
