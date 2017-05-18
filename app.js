@@ -1,5 +1,5 @@
 const fs = require('fs');
-const { URL, URLSearchParams } = require('url');
+const {URL,URLSearchParams} = require('url');
 const cron = require('node-cron');
 const dotenv = require('dotenv').config()
 const express = require('express')
@@ -33,7 +33,10 @@ const corsOptions = {
 const dataPath = __dirname + "/data/";
 
 const regex = {
-	youtube: /http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/watch\?v=|\.be\/)([\w\-\_]*)(&(amp;)?‌​[\w\?‌​=]*)?/i,
+	youtube: /http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/(watch|playlist)\?(v|list)=|\.be\/)([\w\-\_]*)(&(amp;)?‌​[\w\?‌​=]*)?/i,
+	facebook: {
+		video: /facebook.com\/[a-z]*\/videos/i
+	},
 	flickr: /\/photos\/([0-9@a-z]*)\/albums\/([0-9]*)/i
 }
 
@@ -41,7 +44,7 @@ var socialFetch = {
 
 	init() {
 		this.instagram();
-		this.facebook();
+		this.facebook.posts();
 	},
 
 	/*****************
@@ -74,20 +77,27 @@ var socialFetch = {
   	FACEBOOK
 	******************/
 
-	facebook() {
-		graph.setAccessToken(process.env.FACEBOOK_ACCESS_TOKEN);
+	facebook: {
+		posts() {
+			graph.setAccessToken(process.env.FACEBOOK_ACCESS_TOKEN);
 
-		graph.get("teampulse.ch/feed?limit=5", (err, res) => {
-			if (err) return console.log(err);
+			graph.get("teampulse.ch/feed?limit=5", (err, res) => {
+				if (err) return console.log(err);
 
-			var posts = res.data.map((d) => {
-				return {
-					id: d.id.split("_").pop()
-				}
+				var posts = res.data.map((d) => {
+					return {
+						id: d.id.split("_").pop()
+					}
+				});
+
+				tools.writeJson("facebook.json", posts);
 			});
+		},
+		video(url) {
+			var type = "facebook";
+			tools.writeJson("favori.json", {type:type, data:{video:{url:url}}});
+		}
 
-			tools.writeJson("facebook.json", posts);
-		});
 	},
 
 	/*****************
@@ -98,24 +108,43 @@ var socialFetch = {
 		secret: process.env.FLICKR_SECRET
 	},
 	flickr(url) {
+		var type = "flickr";
 		var urlParams = url.match(regex.flickr);
 
 		Flickr.tokenOnly(this.flickrOptions, (error, flickr) => {
+
+			// Convert username to nsid(user_id)
+			function usernameVSnsid(urlParam) {
+				if (!/@N/.test(urlParam)) {
+					flickr.people.findByUsername({
+						username: urlParam
+					}, (err, res) => {
+						if (err) return console.log(err);
+						return res.user.nsid;
+					});
+				}
+				else{
+					return urlParam;
+				}
+			}
+
 			flickr.photosets.getPhotos({
-				user_id: urlParams[1],
+				user_id:usernameVSnsid(urlParams[1]),
 				photoset_id: urlParams[2],
 				page: 1,
 				per_page: 500
-			}, (err, result) => {
+			}, (err, res) => {
 				if (err) return console.log(err);
 
-				var photos = result.photoset.photo.map((d) => {
+				var photos = res.photoset.photo.map((d) => {
 					return {
 						url: "https://farm" + d.farm + ".staticflickr.com/" + d.server + "/" + d.id + "_" + d.secret + "_z.jpg"
 					}
 				});
 
-				tools.writeJson("favori.json", photos);
+				
+
+				tools.writeJson("favori.json", {type:type, data:{photos}});
 			});
 		});
 	},
@@ -128,15 +157,19 @@ var socialFetch = {
 		var url = new URL(url);
 		var urlParams = url.searchParams;
 
-		var video = {
-			v: urlParams.get('v')
-		}
+		var video = {};
 
-		if(urlParams.has('list')){
+		// Url can contain both	
+		if (urlParams.has('v')) {
+			var type = "youtube";
+			video.v = urlParams.get('v')
+		}
+		if (urlParams.has('list')) {
+			var type = "youtube_playlist";
 			video.list = urlParams.get('list')
 		}
 
-		tools.writeJson("favori.json", [video]);
+		tools.writeJson("favori.json", {type:type, data:{video}});
 	}
 
 }
@@ -218,29 +251,42 @@ app.get('/instagram/posts', cors(), (req, res) => {
 
 app.get('/favori', authMiddleware, urlencoded, (req, res) => {
 	var html =
-		`<p>Bonjour ${req.user}!</p>
-			<form action="/favori" method="post">
-               <label for="url">Entrez, s'il vous plaît, une URL d'un album flickr ou d'une vidéo youtube:</label>
-               <input type="url" name="url" placeholder="http://..." />
-               <br/>
-               <button type="submit">Envoyer</button>
-            </form>`;
+		`<h1>Bonjour ${req.user}!</h1>
+		<form action="/favori" method="post">
+			<label for="url">
+				Entrez, s'il vous plaît, l'URL d'
+				<ul>
+					<li>Un album Flickr (ex.: https://www.flickr.com/photos/bic2000/albums/72157651246442701)</li>
+					<li>Une vidéo Youtube (ex.: https://www.youtube.com/watch?v=NPjto5rJ1EQ)</li>
+					<li>Une playlist Youtube (ex.: https://www.youtube.com/playlist?list=PLTU_KAgqpsRfEobesJoxdr3v0l1OxuC9y)</li>
+					<li>Une vidéo Facebook (ex.: https://www.facebook.com/RAAMraces/videos/10158176029550093/)</li>
+				</ul>
+			</label>
+			<input type="url" name="url" style="width:100%" placeholder="http://..." />
+			<br/><br/>
+			<button type="submit">Envoyer</button>
+		</form>`;
 
 	res.send(html);
 });
 
 app.post('/favori', authMiddleware, urlencoded, (req, res) => {
 	var url = req.body.url;
-	var html = `🎉🎉🎉 <p>La section favori a été mise à jour avec : ${url} </p>`;
+	var html = `<h1>🎉🎉🎉</h1><h1>La section favori a été mise à jour avec :</h1><p><a href="${url}">${url}</a></p>`;
 
-	if(regex.flickr.test(url)){
-		socialFetch.flickr(url);
-	}
-	else if(regex.youtube.test(url)){
-		socialFetch.youtube(url);
-	}
-	else{
-		html = `<p>L'url indiquée est incorrecte</p><a href="/favori">Veuillez réessayer</a>`
+	switch (true) {
+		case regex.flickr.test(url):
+			socialFetch.flickr(url);
+			break;
+		case regex.youtube.test(url):
+			socialFetch.youtube(url);
+			break;
+		case regex.facebook.video.test(url):
+			socialFetch.facebook.video(url);
+			break;
+		default:
+			html = `<p>L'url indiquée est incorrecte</p><a href="/favori">Veuillez réessayer</a>`
+			break;
 	}
 
 	res.send(html);
