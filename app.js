@@ -4,6 +4,8 @@ const cron = require('node-cron');
 const dotenv = require('dotenv').config()
 const express = require('express')
 const app = express()
+const server = require('http').createServer(app);
+const io = require('socket.io')(server);
 const cors = require('cors')
 
 const Twitter = require('twitter');
@@ -25,6 +27,8 @@ const basic = auth.basic({
 
 const authMiddleware = auth.connect(basic);
 
+const port = process.env.PORT || 3999;
+
 const corsOptions = {
 	origin: 'http://localhost:3000',
 	optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204 
@@ -43,33 +47,61 @@ const regex = {
 var socialFetch = {
 
 	init() {
-		this.instagram();
-		this.facebook.posts();
+		this.instagram.init();
+		this.facebook.posts.init();
+	},
+
+	update() {
+		this.instagram.update();
+		this.facebook.posts.update();
 	},
 
 	/*****************
 		INSTAGRAM
 	******************/
 
-	instagram() {
-		fetch('https://api.instagram.com/v1/users/self/media/liked?access_token=' + process.env.INSTAGRAM_ACCESS_TOKEN)
-			.then((res) => {
-				return res.json()
-			})
-			.then((body) => {
-				return body.data.map((d) => {
-					return {
-						id: d.id,
-						url: d.link
-					}
+	instagram: {
+		init() {
+			fetch('https://api.instagram.com/v1/users/self/media/liked?count=5&access_token=' + process.env.INSTAGRAM_ACCESS_TOKEN)
+				.then(res => {
+					return res.json()
+				})
+				.then(body => {
+					return body.data.map(d => {
+						return {
+							id: d.id,
+							url: d.link
+						}
+					});
+				})
+				.then(posts => {
+					tools.writeJson("instagram", "json", posts);
+				})
+				.catch(err => {
+					console.log(err);
 				});
-			})
-			.then((posts) => {
-				tools.writeJson("instagram.json", posts);
-			})
-			.catch((err) => {
-				console.log(err);
-			});
+		},
+		update() {
+			fetch('https://api.instagram.com/v1/users/self/media/liked?count=1&access_token=' + process.env.INSTAGRAM_ACCESS_TOKEN)
+				.then(res => {
+					return res.json()
+				})
+				.then(body => {
+					return body.data[0].id
+				})
+				.then(idLastPost => {
+					var savedPosts = tools.readJson("instagram", "json");
+
+					// If the last id post on instagram doesn't exist on our json -> update
+					if (savedPosts.filter(obj => obj.id == idLastPost).id == "") {
+						this.instagram.init();
+					}
+				})
+				.catch(err => {
+					console.log(err);
+				});
+		}
+
 	},
 
 
@@ -78,24 +110,46 @@ var socialFetch = {
 	******************/
 
 	facebook: {
-		posts() {
-			graph.setAccessToken(process.env.FACEBOOK_ACCESS_TOKEN);
+		posts: {
+			init() {
+				graph.setAccessToken(process.env.FACEBOOK_ACCESS_TOKEN);
 
-			graph.get("teampulse.ch/feed?limit=5", (err, res) => {
-				if (err) return console.log(err);
+				graph.get("teampulse.ch/feed?limit=5", (err, res) => {
+					if (err) return console.log(err);
 
-				var posts = res.data.map((d) => {
-					return {
-						id: d.id.split("_").pop()
+					var posts = res.data.map(d => {
+						return {
+							id: d.id.split("_").pop()
+						}
+					});
+
+					tools.writeJson("facebook", "json", posts);
+				});
+			},
+			update() {
+				var savedPosts = tools.readJson("facebook", "json");
+
+				graph.get("teampulse.ch/feed?limit=1", (err, res) => {
+					if (err) return console.log(err);
+
+					var idLastPost = res.data[0].id.split("_").pop();
+
+					if (savedPosts.filter(obj => obj.id == idLastPost).id == "") {
+						this.instagram.init();
 					}
 				});
-
-				tools.writeJson("facebook.json", posts);
-			});
+			}
 		},
 		video(url) {
 			var type = "facebook";
-			tools.writeJson("favori.json", {type:type, data:{video:{url:url}}});
+			tools.writeJson("favori", "json", {
+				type: type,
+				data: {
+					video: {
+						url: url
+					}
+				}
+			});
 		}
 
 	},
@@ -122,29 +176,33 @@ var socialFetch = {
 						if (err) return console.log(err);
 						return res.user.nsid;
 					});
-				}
-				else{
+				} else {
 					return urlParam;
 				}
 			}
 
 			flickr.photosets.getPhotos({
-				user_id:usernameVSnsid(urlParams[1]),
+				user_id: usernameVSnsid(urlParams[1]),
 				photoset_id: urlParams[2],
 				page: 1,
 				per_page: 500
 			}, (err, res) => {
 				if (err) return console.log(err);
 
-				var photos = res.photoset.photo.map((d) => {
+				var photos = res.photoset.photo.map(d => {
 					return {
 						url: "https://farm" + d.farm + ".staticflickr.com/" + d.server + "/" + d.id + "_" + d.secret + "_z.jpg"
 					}
 				});
 
-				
 
-				tools.writeJson("favori.json", {type:type, data:{photos}});
+
+				tools.writeJson("favori", "json", {
+					type: type,
+					data: {
+						photos
+					}
+				});
 			});
 		});
 	},
@@ -169,7 +227,12 @@ var socialFetch = {
 			video.list = urlParams.get('list')
 		}
 
-		tools.writeJson("favori.json", {type:type, data:{video}});
+		tools.writeJson("favori", "json", {
+			type: type,
+			data: {
+				video
+			}
+		});
 	}
 
 }
@@ -192,15 +255,15 @@ var thirdFetch = {
 			"avgCadence": 40.0,
 			"avgPower": 50.0002326965332
 		}
-		tools.writeJson("teampulse.json", fakedata);
+		tools.writeJson("teampulse", "json", fakedata);
 		/*fetch('https://data.teampulse.ch/raam/informations')
-			.then(function (response) {
+			.then(response => {
 				return response.json()
 			})
-			.then(function (body) {
-				tools.writeJson("teampulse.json", body);
+			.then(body => {
+				tools.writeJson("teampulse", "json", body);
 			});
-		.catch(function (err) {
+		.catch(err => {
 			console.log(err);
 		});*/
 	}
@@ -211,13 +274,14 @@ var thirdFetch = {
 ******************/
 
 var tools = {
-	writeJson(filename, data) {
-		fs.writeFile(dataPath + filename, JSON.stringify(data), (err) => {
+	writeJson(filename, ext, data) {
+		fs.writeFile(dataPath + filename + '.' + ext, JSON.stringify(data), err => {
 			if (err) return console.log(err);
+			io.sockets.emit(filename, JSON.stringify(data));
 		});
 	},
-	readJson(filename) {
-		return JSON.parse(fs.readFileSync(dataPath + filename, 'utf8'));
+	readJson(filename, ext) {
+		return JSON.parse(fs.readFileSync(dataPath + filename + '.' + ext, 'utf8'));
 	}
 };
 
@@ -231,19 +295,19 @@ app.get('/', (req, res) => {
 
 app.get('/teampulse/data', cors(), (req, res) => {
 	res.json(
-		tools.readJson("teampulse.json")
+		tools.readJson("teampulse", "json")
 	);
 })
 
 app.get('/facebook/posts', cors(), (req, res) => {
 	res.json(
-		tools.readJson("facebook.json")
+		tools.readJson("facebook", "json")
 	);
 })
 
 app.get('/instagram/posts', cors(), (req, res) => {
 	res.json(
-		tools.readJson("instagram.json")
+		tools.readJson("instagram", "json")
 	);
 })
 
@@ -288,13 +352,12 @@ app.post('/favori', authMiddleware, urlencoded, (req, res) => {
 			html = `<p>L'url indiquée est incorrecte</p><a href="/favori">Veuillez réessayer</a>`
 			break;
 	}
-
 	res.send(html);
 });
 
 app.get('/favori/data', cors(), (req, res) => {
 	res.json(
-		tools.readJson("favori.json")
+		tools.readJson("favori", "json")
 	);
 })
 
@@ -302,16 +365,14 @@ app.get('/favori/data', cors(), (req, res) => {
 socialFetch.init();
 thirdFetch.init();
 
-var port = process.env.PORT || 3999;
-
-app.listen(port, () => {
+server.listen(port, () => {
 	console.log('Teampulse app listening on port ' + port)
 })
 
 // Update social feeds every 5 minutes
 
 cron.schedule('*/5 * * * *', () => {
-	socialFetch.init();
+	socialFetch.update();
 	console.log(new Date() + '- Social feeds updated');
 });
 
