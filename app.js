@@ -231,7 +231,7 @@ app.get('/', (req, res) => {
 
 app.get('/teampulse/data', cors(), (req, res) => {
 	res.json(
-		tools.readJson("instagram.json")
+		tools.readJson("teampulse.json")
 	);
 })
 
