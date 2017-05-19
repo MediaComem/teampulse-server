@@ -1,5 +1,7 @@
+const glob = require("glob")
+const path = require("path")
 const fs = require('fs');
-const {URL,URLSearchParams} = require('url');
+const { URL, URLSearchParams } = require('url');
 const cron = require('node-cron');
 const dotenv = require('dotenv').config()
 const express = require('express')
@@ -277,11 +279,11 @@ var tools = {
 	writeJson(filename, ext, data) {
 		fs.writeFile(dataPath + filename + '.' + ext, JSON.stringify(data), err => {
 			if (err) return console.log(err);
-			io.sockets.emit(filename, JSON.stringify(data));
+			io.sockets.emit(filename, data);
 		});
 	},
-	readJson(filename, ext) {
-		return JSON.parse(fs.readFileSync(dataPath + filename + '.' + ext, 'utf8'));
+	readJson(filename, ext = filename.split('.')[1]) {
+		return JSON.parse(fs.readFileSync(dataPath + filename.split('.')[0] + '.' + ext, 'utf8'));
 	}
 };
 
@@ -369,14 +371,26 @@ server.listen(port, () => {
 	console.log('Teampulse app listening on port ' + port)
 })
 
-// Update social feeds every 5 minutes
+// Send all current json on connection
+
+io.on('connection', function (client) {
+	console.log('Client connected...');
+
+	glob(dataPath + "/*.json", function (err, files) {
+		files.map(f =>
+			client.emit(path.parse(f).name, tools.readJson(path.basename(f)))
+		)
+	})
+});
+
+// Check update social feeds every 5 minutes
 
 cron.schedule('*/5 * * * *', () => {
 	socialFetch.update();
 	console.log(new Date() + '- Social feeds updated');
 });
 
-// Update teampulse feed every minute
+// Check update teampulse feed every minute
 
 cron.schedule('* * * * *', () => {
 	thirdFetch.init();
