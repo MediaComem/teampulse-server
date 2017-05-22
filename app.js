@@ -9,6 +9,7 @@ const app = express()
 const server = require('http').createServer(app);
 const io = require('socket.io')(server);
 const cors = require('cors')
+const moment = require('moment-timezone')
 
 const Twitter = require('twitter');
 const Flickr = require("flickrapi");
@@ -237,7 +238,7 @@ var thirdFetch = {
 		this.teampulse();
 	},
 	teampulse() {
-		var fakedata = {
+		/*var fakedata = {
 			"contestant": "CYCLIST_002",
 			"latitude": 46.764446,
 			"longitude": 6.646111,
@@ -246,17 +247,15 @@ var thirdFetch = {
 			"avgCadence": 40.0,
 			"avgPower": 50.0002326965332
 		}
-		tools.writeJson("teampulse", "json", fakedata);
-		/*fetch('https://data.teampulse.ch/raam/informations')
-			.then(response => {
-				return response.json()
+		tools.writeJson("teampulse", "json", fakedata);*/
+		fetch('https://data.teampulse.ch/raam/informations')
+			.then(res => res.json())
+			.then(res => {
+				// Retrieve and add localTime from location
+				return tools.localTime(res).then(resTime => Object.assign(res, resTime))
 			})
-			.then(body => {
-				tools.writeJson("teampulse", "json", body);
-			});
-		.catch(err => {
-			console.log(err);
-		});*/
+			.then(body => tools.writeJson("teampulse", "json", body))
+			.catch(err => console.log(err));
 	}
 };
 
@@ -274,6 +273,19 @@ var tools = {
 	},
 	readJson(filename, ext = filename.split('.')[1]) {
 		return JSON.parse(fs.readFileSync(dataPath + filename.split('.')[0] + '.' + ext, 'utf8'));
+	},
+	// Retrieve localTime
+	localTime(d) {
+		var curTimestamp = Date.now() / 1000 | 0; // Get timestamp in seconds
+		return fetch(`https://maps.googleapis.com/maps/api/timezone/json?location=${d.latitude},${d.longitude}&timestamp=${curTimestamp}&key=AIzaSyALdzBs07Buy7AoLoXR-29ax3M1D7YRSls`)
+			.then(res => res.json())
+			.then(res => {
+				return {
+					localTime: moment().tz(res.timeZoneId).format(),
+					timeZoneId: res.timeZoneId
+				}
+			})
+			.catch(err => console.log(err));
 	}
 };
 
