@@ -86,7 +86,7 @@ var socialFetch = {
 
 					// If the last id post on instagram doesn't exist on our json -> update
 					if (savedPosts.filter(obj => obj.id == idLastPost).length <= 0) {
-						this.instagram.init();
+						socialFetch.instagram.init();
 					}
 				})
 				.catch(err => console.log(err));
@@ -126,7 +126,7 @@ var socialFetch = {
 
 					// If the last id post on facebook doesn't exist on our json -> update
 					if (savedPosts.filter(obj => obj.id == idLastPost).length <= 0) {
-						this.facebook.posts.init();
+						socialFetch.facebook.posts.init();
 					}
 				});
 			}
