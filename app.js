@@ -85,7 +85,7 @@ var socialFetch = {
 					var savedPosts = tools.readJson("instagram", "json");
 
 					// If the last id post on instagram doesn't exist on our json -> update
-					if (savedPosts.filter(obj => obj.id == idLastPost).id == "") {
+					if (savedPosts.filter(obj => obj.id == idLastPost).length <= 0) {
 						this.instagram.init();
 					}
 				})
@@ -124,8 +124,9 @@ var socialFetch = {
 
 					var idLastPost = res.data[0].id.split("_").pop();
 
-					if (savedPosts.filter(obj => obj.id == idLastPost).id == "") {
-						this.instagram.init();
+					// If the last id post on facebook doesn't exist on our json -> update
+					if (savedPosts.filter(obj => obj.id == idLastPost).length <= 0) {
+						this.facebook.posts.init();
 					}
 				});
 			}
@@ -370,16 +371,12 @@ io.on('connection', function (client) {
 	})
 });
 
-// Check update social feeds every 5 minutes
-
-cron.schedule('*/5 * * * *', () => {
-	socialFetch.update();
-	console.log(`${new Date()} - Social feeds checked`);
-});
-
-// Check update teampulse feed every minute
+// Check update teampulse & social feeds feed every minute
 
 cron.schedule('* * * * *', () => {
 	thirdFetch.init();
 	console.log(`${new Date()} - Teampulse feed updated`);
+
+	socialFetch.update();
+	console.log(`${new Date()} - Social feeds checked`);
 });
