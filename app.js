@@ -24,7 +24,7 @@ const urlencoded = bodyParser.urlencoded({
 const auth = require('http-auth');
 const basic = auth.basic({
 	realm: "Gestion du favori",
-	file: __dirname + "/users.htpasswd"
+	file: `${__dirname}/users.htpasswd`
 });
 
 const authMiddleware = auth.connect(basic);
@@ -36,7 +36,7 @@ const corsOptions = {
 	optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204 
 }
 
-const dataPath = __dirname + "/data/";
+const dataPath = `${__dirname}/data/`;
 
 const regex = {
 	youtube: /http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/(watch|playlist)\?(v|list)=|\.be\/)([\w\-\_]*)(&(amp;)?‌​[\w\?‌​=]*)?/i,
@@ -65,9 +65,7 @@ var socialFetch = {
 	instagram: {
 		init() {
 			fetch('https://api.instagram.com/v1/users/self/media/liked?count=5&access_token=' + process.env.INSTAGRAM_ACCESS_TOKEN)
-				.then(res => {
-					return res.json()
-				})
+				.then(res => res.json())
 				.then(body => {
 					return body.data.map(d => {
 						return {
@@ -76,21 +74,13 @@ var socialFetch = {
 						}
 					});
 				})
-				.then(posts => {
-					tools.writeJson("instagram", "json", posts);
-				})
-				.catch(err => {
-					console.log(err);
-				});
+				.then(posts => tools.writeJson("instagram", "json", posts))
+				.catch(err => console.log(err));
 		},
 		update() {
 			fetch('https://api.instagram.com/v1/users/self/media/liked?count=1&access_token=' + process.env.INSTAGRAM_ACCESS_TOKEN)
-				.then(res => {
-					return res.json()
-				})
-				.then(body => {
-					return body.data[0].id
-				})
+				.then(res => res.json())
+				.then(body => body.data[0].id)
 				.then(idLastPost => {
 					var savedPosts = tools.readJson("instagram", "json");
 
@@ -99,9 +89,7 @@ var socialFetch = {
 						this.instagram.init();
 					}
 				})
-				.catch(err => {
-					console.log(err);
-				});
+				.catch(err => console.log(err));
 		}
 
 	},
@@ -280,6 +268,7 @@ var tools = {
 		fs.writeFile(dataPath + filename + '.' + ext, JSON.stringify(data), err => {
 			if (err) return console.log(err);
 			io.sockets.emit(filename, data);
+			console.log(`${new Date()} - ${filename} updated`);
 		});
 	},
 	readJson(filename, ext = filename.split('.')[1]) {
@@ -367,16 +356,14 @@ app.get('/favori/data', cors(), (req, res) => {
 socialFetch.init();
 thirdFetch.init();
 
-server.listen(port, () => {
-	console.log('Teampulse app listening on port ' + port)
-})
+server.listen(port, () => console.log(`Teampulse app listening on port ${port}`))
 
 // Send all current json on connection
 
 io.on('connection', function (client) {
 	console.log('Client connected...');
 
-	glob(dataPath + "/*.json", function (err, files) {
+	glob(`${dataPath}/*.json`, function (err, files) {
 		files.map(f =>
 			client.emit(path.parse(f).name, tools.readJson(path.basename(f)))
 		)
@@ -387,12 +374,12 @@ io.on('connection', function (client) {
 
 cron.schedule('*/5 * * * *', () => {
 	socialFetch.update();
-	console.log(new Date() + '- Social feeds updated');
+	console.log(`${new Date()} - Social feeds checked`);
 });
 
 // Check update teampulse feed every minute
 
 cron.schedule('* * * * *', () => {
 	thirdFetch.init();
-	console.log(new Date() + '- Teampulse feed updated');
+	console.log(`${new Date()} - Teampulse feed updated`);
 });
