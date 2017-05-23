@@ -240,13 +240,14 @@ var thirdFetch = {
 	teampulse() {
 		var fakedata = {
 			"contestant": "CYCLIST_002",
-			"latitude": 46.764446,
-			"longitude": 6.646111,
+			"latitude": 40.7058316,
+			"longitude": -74.2581876,
 			"numberMinutes": 30,
 			"avgSpeed": 8.780640602111816,
 			"avgCadence": 40.0,
 			"avgPower": 50.0002326965332
 		}
+		tools.writeJson("teampulse", "json", fakedata);
 		fetch("http://teampulse.herokuapp.com/teampulse/data")
 		//fetch('https://data.teampulse.ch/raam/informations')
 			.then(res => res.json())
