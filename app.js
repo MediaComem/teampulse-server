@@ -245,7 +245,9 @@ var thirdFetch = {
 			"numberMinutes": 30,
 			"avgSpeed": 8.780640602111816,
 			"avgCadence": 40.0,
-			"avgPower": 50.0002326965332
+			"avgPower": 50.0002326965332,
+			"temperature":15.42,
+			"altitude":650
 		}
 		tools.writeJson("teampulse", "json", fakedata);
 		fetch("http://teampulse.herokuapp.com/teampulse/data")
