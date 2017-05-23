@@ -238,7 +238,7 @@ var thirdFetch = {
 		this.teampulse();
 	},
 	teampulse() {
-		/*var fakedata = {
+		var fakedata = {
 			"contestant": "CYCLIST_002",
 			"latitude": 46.764446,
 			"longitude": 6.646111,
@@ -247,8 +247,8 @@ var thirdFetch = {
 			"avgCadence": 40.0,
 			"avgPower": 50.0002326965332
 		}
-		tools.writeJson("teampulse", "json", fakedata);*/
-		fetch('https://data.teampulse.ch/raam/informations')
+		fetch("http://teampulse.herokuapp.com/teampulse/data")
+		//fetch('https://data.teampulse.ch/raam/informations')
 			.then(res => res.json())
 			.then(res => {
 				// Retrieve and add localTime from location
@@ -276,11 +276,14 @@ var tools = {
 	},
 	// Retrieve localTime
 	localTime(d) {
-		var curTimestamp = Date.now() / 1000 | 0; // Get timestamp in seconds
-		return fetch(`https://maps.googleapis.com/maps/api/timezone/json?location=${d.latitude},${d.longitude}&timestamp=${curTimestamp}&key=AIzaSyALdzBs07Buy7AoLoXR-29ax3M1D7YRSls`)
+		var curTimestamp = Date.now();
+		var curTimestampSec = curTimestamp / 1000 | 0; // Get timestamp in seconds
+		return fetch(`https://maps.googleapis.com/maps/api/timezone/json?location=${d.latitude},${d.longitude}&timestamp=${curTimestampSec}&key=AIzaSyALdzBs07Buy7AoLoXR-29ax3M1D7YRSls`)
 			.then(res => res.json())
 			.then(res => {
 				return {
+					dstOffset: res.dstOffset,
+					rawOffset: res.rawOffset,
 					localTime: moment().tz(res.timeZoneId).format(),
 					timeZoneId: res.timeZoneId
 				}
