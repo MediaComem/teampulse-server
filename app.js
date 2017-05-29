@@ -251,7 +251,7 @@ var thirdFetch = {
 		}
 		tools.writeJson("teampulse", "json", fakedata);
 		fetch("http://teampulse.herokuapp.com/teampulse/data")
-		//fetch('https://data.teampulse.ch/raam/informations')
+		//fetch('https://data.teampulse.ch/raam/informations?minutes=1')
 			.then(res => res.json())
 			.then(res => {
 				// Retrieve and add localTime from location
