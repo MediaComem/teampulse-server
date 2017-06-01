@@ -95,7 +95,6 @@ var socialFetch = {
 				.then(body => body.data)
 				.then(lastPosts => {
 					var savedPosts = tools.readJson("instagram", "json");
-					io.sockets.emit("favori", favoriSettings);
 					var fingerPrintOnline = []
 					lastPosts.map(d => {
 						fingerPrintOnline.push(
@@ -269,6 +268,7 @@ var socialFetch = {
 				video
 			}
 		}
+		io.sockets.emit("favori", favoriSettings);
 		db.collection('favori').save(favoriSettings, (err, result) => {
 	    if (err) return console.log(err)
 	    console.log('favori saved to database')
