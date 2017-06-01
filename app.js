@@ -40,7 +40,10 @@ const corsOptions = {
 const dataPath = `${__dirname}/data/`;
 
 const regex = {
-	youtube: /http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/(watch|playlist)\?(v|list)=|\.be\/)([\w\-\_]*)(&(amp;)?‌​[\w\?‌​=]*)?/i,
+	youtube: {
+		valid: /http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/(watch|playlist)\?(v|list)=|\.be\/)([\w\-\_]*)(&(amp;)?‌​[\w\?‌​=]*)?/i,
+		getID: /(?:youtube\.com\/\S*(?:(?:\/e(?:mbed))?\/|watch\?(?:\S*?&?v\=))|youtu\.be\/)([a-zA-Z0-9_-]{6,11})/
+	},
 	facebook: {
 		video: /facebook.com\/[a-z]*\/videos/i
 	},
@@ -204,21 +207,21 @@ var socialFetch = {
 	******************/
 
 	youtube(url) {
-		var url = new URL(url);
-		var urlParams = url.searchParams;
-
 		var video = {};
+		video.id = regex.youtube.getID.exec(url);
 
-		console.log(url);
-
-		// Url can contain both	
-		if (urlParams.has('v')) {
-			var type = "youtube";
-			video.v = urlParams.get('v')
-		}
-		if (urlParams.has('list')) {
+		// Playlist
+		if (video.id == null) {
 			var type = "youtube_playlist";
-			video.list = urlParams.get('list')
+			var urlParsed = new URL(url);
+			var urlParams = urlParsed.searchParams;
+
+			video.id = urlParams.get('v'); // if specific starting video is set otherwise: null
+			video.list = urlParams.get('list');
+		}
+		else{
+			var type = "youtube";
+			video.id = video.id[1];
 		}
 
 		tools.writeJson("favori", "json", {
@@ -243,16 +246,16 @@ var thirdFetch = {
 		fetch('https://data.teampulse.ch/raam/informations?minutes=1')
 			.then(res => {
 				return tools.isJSON(res) ? res.json() : {
-						"contestant": "No Data",
-						"latitude": 38.0,
-						"longitude": -97.0,
-						"numberMinutes": 30,
-						"avgSpeed": 12.5,
-						"avgCadence": 40.0,
-						"avgPower": 50.,
-						"temperature": 15.42,
-						"altitude": 450
-					};
+					"contestant": "No Data",
+					"latitude": 38.0,
+					"longitude": -97.0,
+					"numberMinutes": 30,
+					"avgSpeed": 12.5,
+					"avgCadence": 40.0,
+					"avgPower": 50.,
+					"temperature": 15.42,
+					"altitude": 450
+				};
 			})
 			.then(res => {
 				// Retrieve and add localTime from location
@@ -277,7 +280,7 @@ var tools = {
 		fs.writeFile(dataPath + filename + '.' + ext, JSON.stringify(data), err => {
 			if (err) return console.log(err);
 			io.sockets.emit(filename, data);
-			console.log(`${new Date()} - ${filename} updated`);
+			console.log(`${new Date()} - ${filename}.json updated`);
 		});
 	},
 	readJson(filename, ext = filename.split('.')[1]) {
@@ -345,7 +348,7 @@ app.get('/favori', authMiddleware, urlencoded, (req, res) => {
 				Entrez, s'il vous plaît, l'URL d'
 				<ul>
 					<li>Un album Flickr (ex.: https://www.flickr.com/photos/bic2000/albums/72157651246442701)</li>
-					<li>Une vidéo Youtube (ex.: https://www.youtube.com/watch?v=NPjto5rJ1EQ)</li>
+					<li>Une vidéo Youtube (ex.: https://www.youtube.com/watch?v=NPjto5rJ1EQ ou http://youtu.be/OA7DZE2SFnM)</li>
 					<li>Une playlist Youtube (ex.: https://www.youtube.com/playlist?list=PLTU_KAgqpsRfEobesJoxdr3v0l1OxuC9y)</li>
 					<li>Une vidéo Facebook (ex.: https://www.facebook.com/RAAMraces/videos/10158176029550093/)</li>
 				</ul>
@@ -366,7 +369,8 @@ app.post('/favori', authMiddleware, urlencoded, (req, res) => {
 		case regex.flickr.test(url):
 			socialFetch.flickr(url);
 			break;
-		case regex.youtube.test(url):
+		case regex.youtube.valid.test(url):
+			console.log()
 			socialFetch.youtube(url);
 			break;
 		case regex.facebook.video.test(url):
