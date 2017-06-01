@@ -90,13 +90,27 @@ var socialFetch = {
 				.catch(err => console.log(err));
 		},
 		update() {
-			fetch('https://api.instagram.com/v1/users/self/media/liked?count=1&access_token=' + process.env.INSTAGRAM_ACCESS_TOKEN)
+			fetch('https://api.instagram.com/v1/users/self/media/liked?count=5&access_token=' + process.env.INSTAGRAM_ACCESS_TOKEN)
 				.then(res => res.json())
-				.then(body => body.data[0].id)
-				.then(idLastPost => {
+				.then(body => body.data)
+				.then(lastPosts => {
 					var savedPosts = tools.readJson("instagram", "json");
-
-					// If the last id post on instagram doesn't exist on our json -> update
+					io.sockets.emit("favori", favoriSettings);
+					var fingerPrintOnline = []
+					lastPosts.map(d => {
+						fingerPrintOnline.push(
+							{
+								id: d.id,
+								url: d.link
+							}
+						)
+					})
+					console.log(fingerPrintOnline)
+					console.log("####-------------------#######")
+					console.log(savedPosts)
+					console.log("####-------------------#######")
+					console.log(savedPosts.map(function(elem){return elem.url;}).join("")===fingerPrintOnline.map(function(elem){return elem.url;}).join(""))
+					If the last id post on instagram doesn't exist on our json -> update
 					if (savedPosts.filter(obj => obj.id == idLastPost).length <= 0) {
 						socialFetch.instagram.init();
 					}
@@ -159,6 +173,7 @@ var socialFetch = {
 			db.collection('favori').save(favoriSettings, (err, result) => {
 		    if (err) return console.log(err)
 		    console.log('favori saved to database')
+		  	io.sockets.emit("favori", favoriSettings);
 		  })
 
 		}
@@ -216,6 +231,7 @@ var socialFetch = {
 				}
 				db.collection('favori').save(favoriSettings, (err, result) => {
 			    if (err) return console.log(err)
+		    	io.sockets.emit("favori", favoriSettings);
 			    console.log('favori saved to database')
 			  })
 
