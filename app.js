@@ -93,10 +93,9 @@ var socialFetch = {
 			fetch('https://api.instagram.com/v1/users/self/media/liked?count=5&access_token=' + process.env.INSTAGRAM_ACCESS_TOKEN)
 				.then(res => res.json())
 				.then(body => body.data)
-				.then(lastPosts => {
-					var savedPosts = tools.readJson("instagram", "json");
+				.then(posts => {
 					var fingerPrintOnline = []
-					lastPosts.map(d => {
+					posts.map(d => {
 						fingerPrintOnline.push(
 							{
 								id: d.id,
@@ -104,15 +103,13 @@ var socialFetch = {
 							}
 						)
 					})
-					console.log(fingerPrintOnline)
-					console.log("####-------------------#######")
-					console.log(savedPosts)
-					console.log("####-------------------#######")
-					console.log(savedPosts.map(function(elem){return elem.url;}).join("")===fingerPrintOnline.map(function(elem){return elem.url;}).join(""))
-					//If the last id post on instagram doesn't exist on our json -> update
-					// if (savedPosts.filter(obj => obj.id == idLastPost).length <= 0) {
-					// 	socialFetch.instagram.init();
-					// }
+					
+					var savedPosts = tools.readJson("instagram", "json");
+
+					//If the stored instagram posts JSON is different from instragram posts just retrieved -> update
+					if (savedPosts.map(function(elem){return elem.url;}).join("")!=fingerPrintOnline.map(function(elem){return elem.url;}).join("")) {
+						socialFetch.instagram.init();
+					}
 				})
 				.catch(err => console.log(err));
 		}
@@ -144,13 +141,21 @@ var socialFetch = {
 			update() {
 				var savedPosts = tools.readJson("facebook", "json");
 
-				graph.get("teampulse.ch/feed?limit=1", (err, res) => {
+				graph.get("teampulse.ch/feed?limit=5", (err, res) => {
 					if (err) return console.log(err);
 
-					var idLastPost = res.data[0].id.split("_").pop();
+					var fingerPrintOnline = []
+					res.data.map(d => {
+						fingerPrintOnline.push(
+							{
+								id: d.id,
+								url: d.link
+							}
+						)
+					})
 
 					// If the last id post on facebook doesn't exist on our json -> update
-					if (savedPosts.filter(obj => obj.id == idLastPost).length <= 0) {
+					if (savedPosts.map(function(elem){return elem.url;}).join("")!=fingerPrintOnline.map(function(elem){return elem.url;}).join("")) {
 						socialFetch.facebook.posts.init();
 					}
 				});
