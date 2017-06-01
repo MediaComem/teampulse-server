@@ -25,7 +25,7 @@ const urlencoded = bodyParser.urlencoded({
 
 var db
 
-MongoClient.connect('mongodb://heroku_3pxlp1jd:123asd.mlab.com:33991/heroku_3pxlp1jd', (err, database) => {
+MongoClient.connect('mongodb://heroku_3pxlp1jd:123asd@ds133991.mlab.com:33991/heroku_3pxlp1jd', (err, database) => {
   if (err) return console.log(err)
   db = database
 })
