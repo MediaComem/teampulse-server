@@ -15,12 +15,20 @@ const Twitter = require('twitter');
 const Flickr = require("flickrapi");
 const graph = require('fbgraph');
 const fetch = require('node-fetch');
+const MongoClient = require('mongodb').MongoClient
 
 const bodyParser = require('body-parser');
 
 const urlencoded = bodyParser.urlencoded({
 	extended: true
 });
+
+var db
+
+MongoClient.connect('mongodb://localhost/teampulse', (err, database) => {
+  if (err) return console.log(err)
+  db = database
+})
 
 const auth = require('http-auth');
 const basic = auth.basic({
@@ -137,14 +145,22 @@ var socialFetch = {
 		},
 		video(url) {
 			var type = "facebook";
-			tools.writeJson("favori", "json", {
+
+			var favoriSettings = 
+			{
+				date: Date.now(),
 				type: type,
 				data: {
 					video: {
 						url: url
 					}
 				}
-			});
+			}
+			db.collection('favori').save(favoriSettings, (err, result) => {
+		    if (err) return console.log(err)
+		    console.log('favori saved to database')
+		  })
+
 		}
 
 	},
@@ -190,14 +206,19 @@ var socialFetch = {
 					}
 				});
 
-
-
-				tools.writeJson("favori", "json", {
+				var favoriSettings = 
+				{
+					date: Date.now(),
 					type: type,
 					data: {
 						photos
 					}
-				});
+				}
+				db.collection('favori').save(favoriSettings, (err, result) => {
+			    if (err) return console.log(err)
+			    console.log('favori saved to database')
+			  })
+
 			});
 		});
 	},
@@ -224,12 +245,19 @@ var socialFetch = {
 			video.id = video.id[1];
 		}
 
-		tools.writeJson("favori", "json", {
+		var favoriSettings = 
+		{
+			date: Date.now(),
 			type: type,
 			data: {
 				video
 			}
-		});
+		}
+		db.collection('favori').save(favoriSettings, (err, result) => {
+	    if (err) return console.log(err)
+	    console.log('favori saved to database')
+	  })
+
 	}
 
 }
@@ -384,9 +412,12 @@ app.post('/favori', authMiddleware, urlencoded, (req, res) => {
 });
 
 app.get('/favori/data', cors(), (req, res) => {
-	res.json(
-		tools.readJson("favori", "json")
-	);
+	db.collection('favori').find().sort({date:-1}).limit(1).toArray(function(err, results) {
+	  console.log(results)
+	  res.json(
+			results[0]
+		);
+	})
 })
 
 // Init socialFetch
