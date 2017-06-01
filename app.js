@@ -110,7 +110,7 @@ var socialFetch = {
 					console.log(savedPosts)
 					console.log("####-------------------#######")
 					console.log(savedPosts.map(function(elem){return elem.url;}).join("")===fingerPrintOnline.map(function(elem){return elem.url;}).join(""))
-					If the last id post on instagram doesn't exist on our json -> update
+					//If the last id post on instagram doesn't exist on our json -> update
 					if (savedPosts.filter(obj => obj.id == idLastPost).length <= 0) {
 						socialFetch.instagram.init();
 					}
