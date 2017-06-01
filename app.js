@@ -240,21 +240,20 @@ var thirdFetch = {
 		this.teampulse();
 	},
 	teampulse() {
-		/*var fakedata = {
-			"contestant": "CYCLIST_002",
-			"latitude": 40.7058316,
-			"longitude": -74.2581876,
-			"numberMinutes": 30,
-			"avgSpeed": 8.780640602111816,
-			"avgCadence": 40.0,
-			"avgPower": 50.0002326965332,
-			"temperature": 15.42,
-			"altitude": 650
-		}*/
-		//tools.writeJson("teampulse", "json", fakedata);
-		//fetch("http://teampulse.herokuapp.com/teampulse/data")
 		fetch('https://data.teampulse.ch/raam/informations?minutes=1')
-			.then(res => res.json())
+			.then(res => {
+				return tools.isJSON(res) ? res.json() : {
+						"contestant": "No Data",
+						"latitude": 38.0,
+						"longitude": -97.0,
+						"numberMinutes": 30,
+						"avgSpeed": 12.5,
+						"avgCadence": 40.0,
+						"avgPower": 50.,
+						"temperature": 15.42,
+						"altitude": 450
+					};
+			})
 			.then(res => {
 				// Retrieve and add localTime from location
 				return tools.localTime(res).then(resTime => Object.assign(res, resTime))
@@ -299,6 +298,14 @@ var tools = {
 				}
 			})
 			.catch(err => console.log(err));
+	},
+	isJSON(str) {
+		try {
+			JSON.parse(str);
+		} catch (e) {
+			return false;
+		}
+		return true;
 	}
 };
 
