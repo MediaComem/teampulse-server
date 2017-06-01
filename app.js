@@ -209,6 +209,8 @@ var socialFetch = {
 
 		var video = {};
 
+		console.log(url);
+
 		// Url can contain both	
 		if (urlParams.has('v')) {
 			var type = "youtube";
@@ -238,7 +240,7 @@ var thirdFetch = {
 		this.teampulse();
 	},
 	teampulse() {
-		var fakedata = {
+		/*var fakedata = {
 			"contestant": "CYCLIST_002",
 			"latitude": 40.7058316,
 			"longitude": -74.2581876,
@@ -246,19 +248,24 @@ var thirdFetch = {
 			"avgSpeed": 8.780640602111816,
 			"avgCadence": 40.0,
 			"avgPower": 50.0002326965332,
-			"temperature":15.42,
-			"altitude":650
-		}
-		tools.writeJson("teampulse", "json", fakedata);
-		fetch("http://teampulse.herokuapp.com/teampulse/data")
-		//fetch('https://data.teampulse.ch/raam/informations?minutes=1')
+			"temperature": 15.42,
+			"altitude": 650
+		}*/
+		//tools.writeJson("teampulse", "json", fakedata);
+		//fetch("http://teampulse.herokuapp.com/teampulse/data")
+		fetch('https://data.teampulse.ch/raam/informations?minutes=1')
 			.then(res => res.json())
 			.then(res => {
 				// Retrieve and add localTime from location
 				return tools.localTime(res).then(resTime => Object.assign(res, resTime))
 			})
 			.then(body => tools.writeJson("teampulse", "json", body))
-			.catch(err => console.log(err));
+			.catch(err => {
+				console.log(err)
+				if (!err.response) {
+					console.log("response time out！");
+				}
+			});
 	}
 };
 
