@@ -294,7 +294,7 @@ var thirdFetch = {
 	teampulse() {
 		fetch('https://data.teampulse.ch/raam/informations?minutes=1')
 			.then(res => {
-				return tools.isJSON(res) ? res.json() : {
+				return tools.isJSON(JSON.stringify(res)) ? res.json() : {
 					"contestant": "No Data",
 					"latitude": 38.0,
 					"longitude": -97.0,
