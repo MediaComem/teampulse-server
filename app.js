@@ -76,7 +76,7 @@ var socialFetch = {
 
 	instagram: {
 		init() {
-			fetch('https://api.instagram.com/v1/users/self/media/liked?count=5&access_token=' + process.env.INSTAGRAM_ACCESS_TOKEN)
+			fetch('https://api.instagram.com/v1/users/self/media/recent/?count=5&access_token=' + process.env.INSTAGRAM_ACCESS_TOKEN)
 				.then(res => res.json())
 				.then(body => {
 					return body.data.map(d => {
@@ -90,7 +90,7 @@ var socialFetch = {
 				.catch(err => console.log(err));
 		},
 		update() {
-			fetch('https://api.instagram.com/v1/users/self/media/liked?count=5&access_token=' + process.env.INSTAGRAM_ACCESS_TOKEN)
+			fetch('https://api.instagram.com/v1/users/self/media/recent/?count=5&access_token=' + process.env.INSTAGRAM_ACCESS_TOKEN)
 				.then(res => res.json())
 				.then(body => body.data)
 				.then(posts => {
