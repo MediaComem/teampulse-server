@@ -294,6 +294,7 @@ var thirdFetch = {
 	teampulse() {
 		fetch('https://data.teampulse.ch/raam/informations?minutes=1')
 			.then(res => res.json())
+			// Use fake data when API is down
 			.then(res => {
 				return tools.isJSON(res) ? res :
 					{
@@ -308,17 +309,13 @@ var thirdFetch = {
 						"altitude": 450
 					};
 			})
-			.then(res => {
-				return Object.assign(...Object.entries(res).map(([k, v]) => 
+			// Replace NaN and null values
+			.then(res => Object.assign(...Object.entries(res).map(([k, v]) => 
 					v == "NaN" || v == null ? {[k]: '-'} : {[k]: v}
-				));
-			})
-			.then(res => {
-				// Retrieve and add localTime from location
-				//console.log(res.map(v => isNaN(v) ? "-" : v));
-
-				return tools.localTime(res).then(resTime => Object.assign(res, resTime))
-			})
+				))
+			)
+			// Retrieve and add localTime from location
+			.then(res => tools.localTime(res).then(resTime => Object.assign(res, resTime)))
 			.then(body => tools.writeJson("teampulse", "json", body))
 			.catch(err => {
 				console.log(err)
