@@ -126,7 +126,7 @@ var socialFetch = {
 			init() {
 				graph.setAccessToken(process.env.FACEBOOK_ACCESS_TOKEN);
 
-				graph.get("teampulse.ch/feed?limit=5", (err, res) => {
+				graph.get("/141528569659139/feed?limit=5", (err, res) => {
 					if (err) return console.log(err);
 
 					var posts = res.data.map(d => {
@@ -141,21 +141,20 @@ var socialFetch = {
 			update() {
 				var savedPosts = tools.readJson("facebook", "json");
 
-				graph.get("teampulse.ch/feed?limit=5", (err, res) => {
+				graph.get("/141528569659139/feed?limit=5", (err, res) => {
 					if (err) return console.log(err);
 
 					var fingerPrintOnline = []
 					res.data.map(d => {
 						fingerPrintOnline.push(
 							{
-								id: d.id,
-								url: d.link
+								id: d.id.split("_").pop()
 							}
 						)
 					})
 
 					// If the last id post on facebook doesn't exist on our json -> update
-					if (savedPosts.map(function (elem) { return elem.url; }).join("") != fingerPrintOnline.map(function (elem) { return elem.url; }).join("")) {
+					if (savedPosts.map(function (elem) { return elem.id; }).join("") != fingerPrintOnline.map(function (elem) { return elem.id; }).join("")) {
 						socialFetch.facebook.posts.init();
 					}
 				});
