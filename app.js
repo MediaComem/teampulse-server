@@ -26,7 +26,7 @@ const urlencoded = bodyParser.urlencoded({
 var db
 
 MongoClient.connect(process.env.MONGODB_URI, (err, database) => {
-	if (err) return console.log(err)
+	if (err) return console.error(err)
 	db = database
 })
 
@@ -87,7 +87,7 @@ var socialFetch = {
 					});
 				})
 				.then(posts => tools.writeJson("instagram", "json", posts))
-				.catch(err => console.log(err));
+				.catch(err => console.error(err));
 		},
 		update() {
 			fetch('https://api.instagram.com/v1/users/self/media/liked?count=5&access_token=' + process.env.INSTAGRAM_ACCESS_TOKEN)
@@ -111,7 +111,7 @@ var socialFetch = {
 						socialFetch.instagram.init();
 					}
 				})
-				.catch(err => console.log(err));
+				.catch(err => console.error(err));
 		}
 
 	},
@@ -127,7 +127,7 @@ var socialFetch = {
 				graph.setAccessToken(process.env.FACEBOOK_ACCESS_TOKEN);
 
 				graph.get("/141528569659139/feed?limit=5", (err, res) => {
-					if (err) return console.log(err);
+					if (err) return console.error(err);
 
 					var posts = res.data.map(d => {
 						return {
@@ -142,7 +142,7 @@ var socialFetch = {
 				var savedPosts = tools.readJson("facebook", "json");
 
 				graph.get("/141528569659139/feed?limit=5", (err, res) => {
-					if (err) return console.log(err);
+					if (err) return console.error(err);
 
 					var fingerPrintOnline = []
 					res.data.map(d => {
@@ -174,7 +174,7 @@ var socialFetch = {
 					}
 				}
 			db.collection('favori').save(favoriSettings, (err, result) => {
-				if (err) return console.log(err)
+				if (err) return console.error(err)
 				console.log('favori saved to database')
 				io.sockets.emit("favori", favoriSettings);
 			})
@@ -202,7 +202,7 @@ var socialFetch = {
 					flickr.people.findByUsername({
 						username: urlParam
 					}, (err, res) => {
-						if (err) return console.log(err);
+						if (err) return console.error(err);
 						return res.user.nsid;
 					});
 				} else {
@@ -216,7 +216,7 @@ var socialFetch = {
 				page: 1,
 				per_page: 500
 			}, (err, res) => {
-				if (err) return console.log(err);
+				if (err) return console.error(err);
 
 				var photos = res.photoset.photo.map(d => {
 					return {
@@ -233,7 +233,7 @@ var socialFetch = {
 						}
 					}
 				db.collection('favori').save(favoriSettings, (err, result) => {
-					if (err) return console.log(err)
+					if (err) return console.error(err)
 					io.sockets.emit("favori", favoriSettings);
 					console.log('favori saved to database')
 				})
@@ -292,7 +292,8 @@ var thirdFetch = {
 	},
 	teampulse() {
 		fetch('https://data.teampulse.ch/raam/informations?minutes=1')
-			.then(res => res.json())
+			// Check status return undefined if issue
+			.then(res => res.ok ? res.json() : console.error(`${res.status} ${res.statusText}: ${res.url}`))
 			// Use fake data when API is down
 			.then(res => {
 				return tools.isJSON(res) ? res :
@@ -332,7 +333,7 @@ var thirdFetch = {
 var tools = {
 	writeJson(filename, ext, data) {
 		fs.writeFile(dataPath + filename + '.' + ext, JSON.stringify(data), err => {
-			if (err) return console.log(err);
+			if (err) return console.error(err);
 			io.sockets.emit(filename, data);
 			console.log(`${new Date()} - ${filename}.json updated`);
 		});
@@ -354,12 +355,13 @@ var tools = {
 					timeZoneId: res.timeZoneId
 				}
 			})
-			.catch(err => console.log(err));
+			.catch(err => console.error(err));
 	},
 	isJSON(str) {
-		str = JSON.stringify(str);
+		var a;
 		try {
-			JSON.parse(str);
+			str = JSON.stringify(str);
+			a = JSON.parse(str);
 		} catch (e) {
 			return false;
 		}
@@ -425,7 +427,6 @@ app.post('/favori', authMiddleware, urlencoded, (req, res) => {
 			socialFetch.flickr(url);
 			break;
 		case regex.youtube.valid.test(url):
-			console.log()
 			socialFetch.youtube(url);
 			break;
 		case regex.facebook.video.test(url):
