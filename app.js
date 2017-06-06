@@ -24,11 +24,11 @@ const urlencoded = bodyParser.urlencoded({
 });
 
 var db
-
+/*
 MongoClient.connect(process.env.MONGODB_URI, (err, database) => {
   if (err) return console.log(err)
   db = database
-})
+})*/
 
 const auth = require('http-auth');
 const basic = auth.basic({
@@ -103,11 +103,11 @@ var socialFetch = {
 							}
 						)
 					})
-					
+
 					var savedPosts = tools.readJson("instagram", "json");
 
 					//If the stored instagram posts JSON is different from instragram posts just retrieved -> update
-					if (savedPosts.map(function(elem){return elem.url;}).join("")!=fingerPrintOnline.map(function(elem){return elem.url;}).join("")) {
+					if (savedPosts.map(function (elem) { return elem.url; }).join("") != fingerPrintOnline.map(function (elem) { return elem.url; }).join("")) {
 						socialFetch.instagram.init();
 					}
 				})
@@ -155,7 +155,7 @@ var socialFetch = {
 					})
 
 					// If the last id post on facebook doesn't exist on our json -> update
-					if (savedPosts.map(function(elem){return elem.url;}).join("")!=fingerPrintOnline.map(function(elem){return elem.url;}).join("")) {
+					if (savedPosts.map(function (elem) { return elem.url; }).join("") != fingerPrintOnline.map(function (elem) { return elem.url; }).join("")) {
 						socialFetch.facebook.posts.init();
 					}
 				});
@@ -164,21 +164,21 @@ var socialFetch = {
 		video(url) {
 			var type = "facebook";
 
-			var favoriSettings = 
-			{
-				date: Date.now(),
-				type: type,
-				data: {
-					video: {
-						url: url
+			var favoriSettings =
+				{
+					date: Date.now(),
+					type: type,
+					data: {
+						video: {
+							url: url
+						}
 					}
 				}
-			}
 			db.collection('favori').save(favoriSettings, (err, result) => {
-		    if (err) return console.log(err)
-		    console.log('favori saved to database')
-		  	io.sockets.emit("favori", favoriSettings);
-		  })
+				if (err) return console.log(err)
+				console.log('favori saved to database')
+				io.sockets.emit("favori", favoriSettings);
+			})
 
 		}
 
@@ -225,19 +225,19 @@ var socialFetch = {
 					}
 				});
 
-				var favoriSettings = 
-				{
-					date: Date.now(),
-					type: type,
-					data: {
-						photos
+				var favoriSettings =
+					{
+						date: Date.now(),
+						type: type,
+						data: {
+							photos
+						}
 					}
-				}
-				db.collection('favori').save(favoriSettings, (err, result) => {
+				/*db.collection('favori').save(favoriSettings, (err, result) => {
 			    if (err) return console.log(err)
 		    	io.sockets.emit("favori", favoriSettings);
 			    console.log('favori saved to database')
-			  })
+			  })*/
 
 			});
 		});
@@ -260,24 +260,24 @@ var socialFetch = {
 			video.id = urlParams.get('v'); // if specific starting video is set otherwise: null
 			video.list = urlParams.get('list');
 		}
-		else{
+		else {
 			var type = "youtube";
 			video.id = video.id[1];
 		}
 
-		var favoriSettings = 
-		{
-			date: Date.now(),
-			type: type,
-			data: {
-				video
+		var favoriSettings =
+			{
+				date: Date.now(),
+				type: type,
+				data: {
+					video
+				}
 			}
-		}
 		io.sockets.emit("favori", favoriSettings);
-		db.collection('favori').save(favoriSettings, (err, result) => {
+		/*db.collection('favori').save(favoriSettings, (err, result) => {
 	    if (err) return console.log(err)
 	    console.log('favori saved to database')
-	  })
+	  })*/
 
 	}
 
@@ -293,21 +293,30 @@ var thirdFetch = {
 	},
 	teampulse() {
 		fetch('https://data.teampulse.ch/raam/informations?minutes=1')
+			.then(res => res.json())
 			.then(res => {
-				return tools.isJSON(JSON.stringify(res)) ? res.json() : {
-					"contestant": "No Data",
-					"latitude": 38.0,
-					"longitude": -97.0,
-					"numberMinutes": 30,
-					"avgSpeed": 12.5,
-					"avgCadence": 40.0,
-					"avgPower": 50.,
-					"temperature": 15.42,
-					"altitude": 450
-				};
+				return tools.isJSON(res) ? res :
+					{
+						"contestant": "No Data",
+						"latitude": 38.0,
+						"longitude": -97.0,
+						"numberMinutes": 30,
+						"avgSpeed": 12.5,
+						"avgCadence": 40.0,
+						"avgPower": 50.,
+						"temperature": 15.42,
+						"altitude": 450
+					};
+			})
+			.then(res => {
+				return Object.assign(...Object.entries(res).map(([k, v]) => 
+					v == "NaN" || v == null ? {[k]: '-'} : {[k]: v}
+				));
 			})
 			.then(res => {
 				// Retrieve and add localTime from location
+				//console.log(res.map(v => isNaN(v) ? "-" : v));
+
 				return tools.localTime(res).then(resTime => Object.assign(res, resTime))
 			})
 			.then(body => tools.writeJson("teampulse", "json", body))
@@ -352,6 +361,7 @@ var tools = {
 			.catch(err => console.log(err));
 	},
 	isJSON(str) {
+		str = JSON.stringify(str);
 		try {
 			JSON.parse(str);
 		} catch (e) {
@@ -433,12 +443,12 @@ app.post('/favori', authMiddleware, urlencoded, (req, res) => {
 });
 
 app.get('/favori/data', cors(), (req, res) => {
-	db.collection('favori').find().sort({date:-1}).limit(1).toArray(function(err, results) {
+	/*db.collection('favori').find().sort({date:-1}).limit(1).toArray(function(err, results) {
 	  console.log(results)
 	  res.json(
 			results[0]
 		);
-	})
+	})*/
 })
 
 // Init socialFetch
