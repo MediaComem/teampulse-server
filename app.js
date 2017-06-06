@@ -24,11 +24,11 @@ const urlencoded = bodyParser.urlencoded({
 });
 
 var db
-/*
+
 MongoClient.connect(process.env.MONGODB_URI, (err, database) => {
-  if (err) return console.log(err)
-  db = database
-})*/
+	if (err) return console.log(err)
+	db = database
+})
 
 const auth = require('http-auth');
 const basic = auth.basic({
@@ -233,11 +233,11 @@ var socialFetch = {
 							photos
 						}
 					}
-				/*db.collection('favori').save(favoriSettings, (err, result) => {
-			    if (err) return console.log(err)
-		    	io.sockets.emit("favori", favoriSettings);
-			    console.log('favori saved to database')
-			  })*/
+				db.collection('favori').save(favoriSettings, (err, result) => {
+					if (err) return console.log(err)
+					io.sockets.emit("favori", favoriSettings);
+					console.log('favori saved to database')
+				})
 
 			});
 		});
@@ -274,10 +274,10 @@ var socialFetch = {
 				}
 			}
 		io.sockets.emit("favori", favoriSettings);
-		/*db.collection('favori').save(favoriSettings, (err, result) => {
-	    if (err) return console.log(err)
-	    console.log('favori saved to database')
-	  })*/
+		db.collection('favori').save(favoriSettings, (err, result) => {
+			if (err) return console.log(err)
+			console.log('favori saved to database')
+		})
 
 	}
 
@@ -310,9 +310,9 @@ var thirdFetch = {
 					};
 			})
 			// Replace NaN and null values
-			.then(res => Object.assign(...Object.entries(res).map(([k, v]) => 
-					v == "NaN" || v == null ? {[k]: '-'} : {[k]: v}
-				))
+			.then(res => Object.assign(...Object.entries(res).map(([k, v]) =>
+				v == "NaN" || v == null ? { [k]: '-' } : { [k]: v }
+			))
 			)
 			// Retrieve and add localTime from location
 			.then(res => tools.localTime(res).then(resTime => Object.assign(res, resTime)))
@@ -440,12 +440,12 @@ app.post('/favori', authMiddleware, urlencoded, (req, res) => {
 });
 
 app.get('/favori/data', cors(), (req, res) => {
-	/*db.collection('favori').find().sort({date:-1}).limit(1).toArray(function(err, results) {
-	  console.log(results)
-	  res.json(
+	db.collection('favori').find().sort({ date: -1 }).limit(1).toArray(function (err, results) {
+		console.log(results)
+		res.json(
 			results[0]
 		);
-	})*/
+	})
 })
 
 // Init socialFetch
