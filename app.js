@@ -7,6 +7,8 @@ const dotenv = require('dotenv').config()
 const express = require('express')
 const app = express()
 const server = require('http').createServer(app);
+const port = process.env.PORT || 3999;
+server.listen(port, () => console.log(`Teampulse app listening on port ${port}`))
 const io = require('socket.io')(server);
 const cors = require('cors')
 const moment = require('moment-timezone')
@@ -38,8 +40,6 @@ const basic = auth.basic({
 
 const authMiddleware = auth.connect(basic);
 
-const port = process.env.PORT || 3999;
-
 const corsOptions = {
 	origin: 'http://localhost:3000',
 	optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204 
@@ -61,11 +61,13 @@ const regex = {
 var socialFetch = {
 
 	init() {
+		console.log(`${new Date()} - ### Init ### Social feeds`);
 		this.instagram.init();
 		this.facebook.posts.init();
 	},
 
 	update() {
+		console.log(`${new Date()} - ### Check Update ### Social feeds`);
 		this.instagram.update();
 		this.facebook.posts.update();
 	},
@@ -288,41 +290,68 @@ var socialFetch = {
 
 var thirdFetch = {
 	init() {
-		this.teampulse();
+		console.log(`${new Date()} - ### Init ### Teampulse`);
+		this.teampulse.base();
+		this.teampulse.switch();
 	},
-	teampulse() {
-		fetch('https://data.teampulse.ch/raam/informations?minutes=1')
-			// Check status return undefined if issue
-			.then(res => res.ok ? res.json() : console.error(`${res.status} ${res.statusText}: ${res.url}`))
-			// Use fake data when API is down
-			.then(res => {
-				return tools.isJSON(res) ? res :
-					{
-						"contestant": "No Data",
-						"latitude": 38.0,
-						"longitude": -97.0,
-						"numberMinutes": 30,
-						"avgSpeed": 12.5,
-						"avgCadence": 40.0,
-						"avgPower": 50.,
-						"temperature": 15.42,
-						"altitude": 450
-					};
-			})
-			// Replace NaN and null values
-			.then(res => Object.assign(...Object.entries(res).map(([k, v]) =>
-				v == "NaN" || v == null ? { [k]: '-' } : { [k]: v }
-			))
-			)
-			// Retrieve and add localTime from location
-			.then(res => tools.localTime(res).then(resTime => Object.assign(res, resTime)))
-			.then(body => tools.writeJson("teampulse", "json", body))
-			.catch(err => {
-				console.log(err)
-				if (!err.response) {
-					console.log("response time out！");
-				}
-			});
+	update() {
+		console.log(`${new Date()} - ### Start Update ### Teampulse`);
+		this.init();
+	},
+	teampulse: {
+		base() {
+			fetch('https://data.teampulse.ch/raam/informations?minutes=1')
+				// Check status return undefined if issue
+				.then(res => res.ok ? res.json() : console.error(`${res.status} ${res.statusText}: ${res.url}`))
+				// Use fake data when API is down
+				.then(res => {
+					return tools.isJSON(res) || res == "" ? res :
+						{
+							"contestant": "No Data",
+							"latitude": 38.0,
+							"longitude": -97.0,
+							"numberMinutes": 30,
+							"avgSpeed": 12.5,
+							"avgCadence": 40.0,
+							"avgPower": 50.,
+							"temperature": 15.42,
+							"altitude": 450
+						};
+				})
+				// Replace NaN and null values
+				.then(res => Object.assign(...Object.entries(res).map(([k, v]) =>
+					v == "NaN" || v == null ? { [k]: '-' } : { [k]: v }
+				))
+				)
+				// Retrieve and add localTime from location
+				.then(res => tools.localTime(res).then(resTime => Object.assign(res, resTime)))
+				.then(body => tools.writeJson("teampulse", "json", body))
+				.catch(err => {
+					console.log(err)
+					if (!err.response) {
+						console.log("response time out！");
+					}
+				});
+		},
+		switch() {
+			fetch('https://data.teampulse.ch/raam/switch')
+				// Check status return undefined if issue
+				.then(res => res.ok ? res.json() : console.error(`${res.status} ${res.statusText}: ${res.url}`))
+				// Use fake data when API is down
+				.then(res => {
+					return tools.isJSON(res) || res == "" ? res :
+						[{ "contestant": "CYCLIST_002", "latitude": 46.508057, "longitude": 6.627222, "date": 1494333792000 }, { "contestant": "CYCLIST_004", "latitude": 46.508057, "longitude": 6.627222, "date": 1494334069000 }, { "contestant": "CYCLIST_007", "latitude": 46.504723, "longitude": 6.6730556, "date": 1494334548000 }, { "contestant": "CYCLIST_008", "latitude": 46.486946, "longitude": 6.7225, "date": 1494335311000 }, { "contestant": "CYCLIST_005", "latitude": 46.505, "longitude": 6.6719446, "date": 1494335835000 }];
+				})
+				// Retrieve and add localTime from location
+				.then(res => Promise.all(res.map(d => tools.localTime(d, d.date).then(resTime => Object.assign(d, resTime)))))
+				.then(body => tools.writeJson("teampulse-switch", "json", body))
+				.catch(err => {
+					console.log(err)
+					if (!err.response) {
+						console.log("response time out！");
+					}
+				});
+		}
 	}
 };
 
@@ -342,8 +371,7 @@ var tools = {
 		return JSON.parse(fs.readFileSync(dataPath + filename.split('.')[0] + '.' + ext, 'utf8'));
 	},
 	// Retrieve localTime
-	localTime(d) {
-		var curTimestamp = Date.now();
+	localTime(d, curTimestamp = Date.now()) {
 		var curTimestampSec = curTimestamp / 1000 | 0; // Get timestamp in seconds
 		return fetch(`https://maps.googleapis.com/maps/api/timezone/json?location=${d.latitude},${d.longitude}&timestamp=${curTimestampSec}&key=AIzaSyALdzBs07Buy7AoLoXR-29ax3M1D7YRSls`)
 			.then(res => res.json())
@@ -351,7 +379,7 @@ var tools = {
 				return {
 					dstOffset: res.dstOffset,
 					rawOffset: res.rawOffset,
-					localTime: moment().tz(res.timeZoneId).format(),
+					localTime: moment(curTimestamp).tz(res.timeZoneId).format(),
 					timeZoneId: res.timeZoneId
 				}
 			})
@@ -452,7 +480,12 @@ app.get('/favori/data', cors(), (req, res) => {
 socialFetch.init();
 thirdFetch.init();
 
-server.listen(port, () => console.log(`Teampulse app listening on port ${port}`))
+// Check update teampulse & social feeds feed every minute
+
+cron.schedule('* * * * *', () => {
+	thirdFetch.update();
+	socialFetch.update();
+});
 
 // Send all current json on connection
 
@@ -466,12 +499,3 @@ io.on('connection', function (client) {
 	})
 });
 
-// Check update teampulse & social feeds feed every minute
-
-cron.schedule('* * * * *', () => {
-	thirdFetch.init();
-	console.log(`${new Date()} - Teampulse feed updated`);
-
-	socialFetch.update();
-	console.log(`${new Date()} - Social feeds checked`);
-});
