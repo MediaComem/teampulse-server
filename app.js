@@ -78,7 +78,7 @@ var socialFetch = {
 
 	instagram: {
 		init() {
-			fetch('https://api.instagram.com/v1/users/self/media/liked?count=5&access_token=' + process.env.INSTAGRAM_ACCESS_TOKEN)
+			fetch('https://api.instagram.com/v1/users/self/media/recent/?count=5&access_token=' + process.env.INSTAGRAM_ACCESS_TOKEN)
 				.then(res => res.json())
 				.then(body => {
 					return body.data.map(d => {
@@ -92,7 +92,7 @@ var socialFetch = {
 				.catch(err => console.error(err));
 		},
 		update() {
-			fetch('https://api.instagram.com/v1/users/self/media/liked?count=5&access_token=' + process.env.INSTAGRAM_ACCESS_TOKEN)
+			fetch('https://api.instagram.com/v1/users/self/media/recent/?count=5&access_token=' + process.env.INSTAGRAM_ACCESS_TOKEN)
 				.then(res => res.json())
 				.then(body => body.data)
 				.then(posts => {
@@ -128,7 +128,7 @@ var socialFetch = {
 			init() {
 				graph.setAccessToken(process.env.FACEBOOK_ACCESS_TOKEN);
 
-				graph.get("/141528569659139/feed?limit=5", (err, res) => {
+				graph.get("/teampulse.ch/feed?limit=5", (err, res) => {
 					if (err) return console.error(err);
 
 					var posts = res.data.map(d => {
@@ -143,7 +143,7 @@ var socialFetch = {
 			update() {
 				var savedPosts = tools.readJson("facebook", "json");
 
-				graph.get("/141528569659139/feed?limit=5", (err, res) => {
+				graph.get("/teampulse.ch/feed?limit=5", (err, res) => {
 					if (err) return console.error(err);
 
 					var fingerPrintOnline = []
