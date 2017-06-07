@@ -411,6 +411,12 @@ app.get('/teampulse/data', cors(), (req, res) => {
 	);
 })
 
+app.get('/teampulse/switch', cors(), (req, res) => {
+	res.json(
+		tools.readJson("teampulse-switch", "json")
+	);
+})
+
 app.get('/facebook/posts', cors(), (req, res) => {
 	res.json(
 		tools.readJson("facebook", "json")
