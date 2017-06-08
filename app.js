@@ -55,7 +55,7 @@ const regex = {
 	facebook: {
 		video: /facebook.com\/[a-z]*\/videos/i
 	},
-	flickr: /\/photos\/([0-9@a-z]*)\/albums\/([0-9]*)/i
+	flickr: /\/photos\/([a-zA-Z0-9_-]*)\/albums\/([0-9]*)/i
 }
 
 var socialFetch = {
