@@ -199,50 +199,62 @@ var socialFetch = {
 		Flickr.tokenOnly(this.flickrOptions, (error, flickr) => {
 
 			// Convert username to nsid(user_id)
-			function usernameVSnsid(urlParam) {
-				if (!/@N/.test(urlParam)) {
-					flickr.people.findByUsername({
-						username: urlParam
-					}, (err, res) => {
-						if (err) return console.error(err);
-						return res.user.nsid;
-					});
-				} else {
-					return urlParam;
-				}
+			function lookupUser(url) {
+				flickr.urls.lookupUser({
+					url: url
+				}, (err, res) => {
+					if (err) return console.error(err);
+					return res.user.id;
+				});
 			}
 
 			flickr.photosets.getPhotos({
-				user_id: usernameVSnsid(urlParams[1]),
+				user_id: lookupUser(url),
 				photoset_id: urlParams[2],
 				page: 1,
 				per_page: 500
 			}, (err, res) => {
 				if (err) return console.error(err);
 
-				var photos = res.photoset.photo.map(d => {
-					return {
-						url_large: "https://farm" + d.farm + ".staticflickr.com/" + d.server + "/" + d.id + "_" + d.secret + "_b.jpg",
-						url_medium800: "https://farm" + d.farm + ".staticflickr.com/" + d.server + "/" + d.id + "_" + d.secret + "_c.jpg",
-						url_medium640: "https://farm" + d.farm + ".staticflickr.com/" + d.server + "/" + d.id + "_" + d.secret + "_z.jpg",
-						url_medium: "https://farm" + d.farm + ".staticflickr.com/" + d.server + "/" + d.id + "_" + d.secret + ".jpg",
-						url_small: "https://farm" + d.farm + ".staticflickr.com/" + d.server + "/" + d.id + "_" + d.secret + "_m.jpg",
-					}
-				});
+				var getPhotosWithSizes = Promise.all(res.photoset.photo.map(d => {
 
-				var favoriSettings =
-					{
-						date: Date.now(),
-						type: type,
-						data: {
-							photos
+					return new Promise((resolve, reject) => flickr.photos.getSizes({
+						photo_id: d.id
+					}, (err, res) => {
+						if (err) return reject(err);
+						var usedSizes = ['Medium', 'Medium 800', 'Large'];
+						var usedKeys = ['label', 'width', 'height', 'source'];
+						var filteredRes = res.sizes.size
+							.filter(s => usedSizes.indexOf(s.label) > -1)
+							.map(s => {
+								return Object.keys(s)
+								.filter(key => usedKeys.includes(key))
+								.reduce((obj, key) => {
+									obj[key] = s[key];
+									return obj;
+								}, {});
+							});
+
+						resolve(filteredRes);
+					}));
+
+				}));
+
+				getPhotosWithSizes.then(photos => {
+					var favoriSettings =
+						{
+							date: Date.now(),
+							type: type,
+							data: {
+								photos
+							}
 						}
-					}
-				db.collection('favori').save(favoriSettings, (err, result) => {
-					if (err) return console.error(err)
-					io.sockets.emit("favori", favoriSettings);
-					console.log('favori saved to database')
-				})
+					db.collection('favori').save(favoriSettings, (err, result) => {
+						if (err) return console.error(err)
+						io.sockets.emit("favori", favoriSettings);
+						console.log('favori saved to database')
+					})
+				});
 
 			});
 		});
@@ -457,7 +469,7 @@ app.get('/favori', authMiddleware, urlencoded, (req, res) => {
 
 app.post('/favori', authMiddleware, urlencoded, (req, res) => {
 	var url = req.body.url;
-	var html = `<h1>🎉🎉🎉</h1><h1>La section favori a été mise à jour avec :</h1><p><a href="${url}">${url}</a></p>`;
+	var html = `<h1>🎉🎉🎉</h1><h1>La section favori va étre mise à jour avec :</h1><p><a href="${url}">${url}</a></p><p>La mise à jour est instantanée pour les vidéos, mais peut prendre plusieurs secondes pour un album flickr conséquent</p>`;
 
 	switch (true) {
 		case regex.flickr.test(url):
@@ -478,7 +490,6 @@ app.post('/favori', authMiddleware, urlencoded, (req, res) => {
 
 app.get('/favori/data', cors(), (req, res) => {
 	db.collection('favori').find().sort({ date: -1 }).limit(1).toArray(function (err, results) {
-		console.log(results)
 		res.json(
 			results[0]
 		);
