@@ -129,7 +129,7 @@ var socialFetch = {
 				graph.setAccessToken(process.env.FACEBOOK_ACCESS_TOKEN);
 
 				graph.get("/teampulse.ch/feed?limit=5", (err, res) => {
-					if (err) return console.error(err);
+					if (err) return Promise.reject(err);
 
 					var posts = res.data.map(d => {
 						return {
@@ -144,7 +144,7 @@ var socialFetch = {
 				var savedPosts = tools.readJson("facebook", "json");
 
 				graph.get("/teampulse.ch/feed?limit=5", (err, res) => {
-					if (err) return console.error(err);
+					if (err) return Promise.reject(err);
 
 					var fingerPrintOnline = []
 					res.data.map(d => {
@@ -177,7 +177,7 @@ var socialFetch = {
 				}
 			db.collection('favori').save(favoriSettings, (err, result) => {
 				if (err) return console.error(err)
-				console.log('favori saved to database')
+				console.log('Favori saved to database')
 				io.sockets.emit("favori", favoriSettings);
 			})
 
@@ -228,11 +228,11 @@ var socialFetch = {
 							.filter(s => usedSizes.indexOf(s.label) > -1)
 							.map(s => {
 								return Object.keys(s)
-								.filter(key => usedKeys.includes(key))
-								.reduce((obj, key) => {
-									obj[key] = s[key];
-									return obj;
-								}, {});
+									.filter(key => usedKeys.includes(key))
+									.reduce((obj, key) => {
+										obj[key] = s[key];
+										return obj;
+									}, {});
 							});
 
 						resolve(filteredRes);
@@ -250,11 +250,12 @@ var socialFetch = {
 							}
 						}
 					db.collection('favori').save(favoriSettings, (err, result) => {
-						if (err) return console.error(err)
+						if (err) return Promise.reject(err)
 						io.sockets.emit("favori", favoriSettings);
-						console.log('favori saved to database')
+						console.log('Favori saved to database')
 					})
-				});
+				})
+					.catch(err => console.error(err));
 
 			});
 		});
@@ -292,7 +293,7 @@ var socialFetch = {
 		io.sockets.emit("favori", favoriSettings);
 		db.collection('favori').save(favoriSettings, (err, result) => {
 			if (err) return console.log(err)
-			console.log('favori saved to database')
+			console.log('Favori saved to database')
 		})
 
 	}
@@ -315,56 +316,55 @@ var thirdFetch = {
 	},
 	teampulse: {
 		base() {
-			fetch('https://data.teampulse.ch/raam/informations?minutes=1')
-				// Check status return undefined if issue
-				.then(res => res.ok ? res.json() : console.error(`${res.status} ${res.statusText}: ${res.url}`))
-				// Use fake data when API is down
-				.then(res => {
-					return tools.isJSON(res) || res == "" ? res :
-						{
-							"contestant": "No Data",
-							"latitude": 38.0,
-							"longitude": -97.0,
-							"numberMinutes": 30,
-							"avgSpeed": 12.5,
-							"avgCadence": 40.0,
-							"avgPower": 50.,
-							"temperature": 15.42,
-							"altitude": 450
-						};
-				})
+			fetch('https://data.teampulse.ch/raam/informations?minutes=1', { method: 'GET', timeout: 5000 }) // Return an object json
+				// Check connection and errors
+				.then(res => res.ok ? res.json() : Promise.reject(`${res.status} ${res.statusText}: ${res.url}`))
+				.then(res => res == "" || res == "No Data" ? res : Promise.reject('No Data'))
+				.then(res => tools.isJSON(res) ? res : Promise.reject('JSON parsing error'))
 				// Replace NaN and null values
 				.then(res => Object.assign(...Object.entries(res).map(([k, v]) =>
 					v == "NaN" || v == null ? { [k]: '-' } : { [k]: v }
-				))
-				)
+				)))
 				// Retrieve and add localTime from location
 				.then(res => tools.localTime(res).then(resTime => Object.assign(res, resTime)))
-				.then(body => tools.writeJson("teampulse", "json", body))
+				// Save in DB + JSON
+				.then(res => {
+					tools.writeJson("teampulse", "json", res)
+					db.collection('teampulse-data').save(res, (err, result) => {
+						if (err) return Promise.reject(err)
+						console.log('Teampulse saved to database')
+						io.sockets.emit("teampulse", res);
+					})
+				})
 				.catch(err => {
-					console.log(err)
-					if (!err.response) {
-						console.log("response time out！");
-					}
+					console.error(`Error Tempulse Data: ${err}`);
 				});
 		},
 		switch() {
-			fetch('https://data.teampulse.ch/raam/switch')
-				// Check status return undefined if issue
-				.then(res => res.ok ? res.json() : console.error(`${res.status} ${res.statusText}: ${res.url}`))
-				// Use fake data when API is down
-				.then(res => {
-					return tools.isJSON(res) || res == "" ? res :
-						[{ "contestant": "CYCLIST_002", "latitude": 46.508057, "longitude": 6.627222, "date": 1494333792000 }, { "contestant": "CYCLIST_004", "latitude": 46.508057, "longitude": 6.627222, "date": 1494334069000 }, { "contestant": "CYCLIST_007", "latitude": 46.504723, "longitude": 6.6730556, "date": 1494334548000 }, { "contestant": "CYCLIST_008", "latitude": 46.486946, "longitude": 6.7225, "date": 1494335311000 }, { "contestant": "CYCLIST_005", "latitude": 46.505, "longitude": 6.6719446, "date": 1494335835000 }];
-				})
+			fetch('https://data.teampulse.ch/raam/switch', { method: 'GET', timeout: 5000 }) // Return an array of objects json
+				// Check connection and errors
+				.then(res => res.ok ? res.json() : Promise.reject(`${res.status} ${res.statusText}: ${res.url}`))
+				.then(res => res.length > 0 ? res : Promise.reject('No Data'))
+				.then(res => tools.isJSON(res) ? res : Promise.reject('JSON parsing error'))
 				// Retrieve and add localTime from location
 				.then(res => Promise.all(res.map(d => tools.localTime(d, d.date).then(resTime => Object.assign(d, resTime)))))
-				.then(body => tools.writeJson("teampulse-switch", "json", body))
+				// Replace NaN and null values
+				.then(res => Object.assign(...Object.entries(res).map(([k, v]) =>
+					v == "NaN" || v == null ? { [k]: '-' } : { [k]: v }
+				)))
+				// Convert array to json (for using only one document in mongodb)
+				.then(array => { return { "data-switch": array } })
+				// Save in DB + JSON
+				.then(res => {
+					tools.writeJson("teampulse-switch", "json", res);
+					db.collection('teampulse-data').save(res, (err, result) => {
+						if (err) return Promise.reject(err)
+						console.log('Teampulse saved to database')
+						io.sockets.emit("teampulse", res);
+					})
+				})
 				.catch(err => {
-					console.log(err)
-					if (!err.response) {
-						console.log("response time out！");
-					}
+					console.error(`Error Tempulse Switch: ${err}`);
 				});
 		}
 	}
@@ -377,7 +377,7 @@ var thirdFetch = {
 var tools = {
 	writeJson(filename, ext, data) {
 		fs.writeFile(dataPath + filename + '.' + ext, JSON.stringify(data), err => {
-			if (err) return console.error(err);
+			if (err) return Promise.reject(err);
 			io.sockets.emit(filename, data);
 			console.log(`${new Date()} - ${filename}.json updated`);
 		});
@@ -421,15 +421,19 @@ app.get('/', (req, res) => {
 })
 
 app.get('/teampulse/data', cors(), (req, res) => {
-	res.json(
-		tools.readJson("teampulse", "json")
-	);
+	db.collection('teampulse-data').find().sort({ date: -1 }).limit(1).toArray(function (err, results) {
+		res.json(
+			results[0]
+		);
+	})
 })
 
 app.get('/teampulse/switch', cors(), (req, res) => {
-	res.json(
-		tools.readJson("teampulse-switch", "json")
-	);
+	db.collection('teampulse-switch').find().sort({ date: -1 }).limit(1).toArray(function (err, results) {
+		res.json(
+			results[0]
+		);
+	})
 })
 
 app.get('/facebook/posts', cors(), (req, res) => {
