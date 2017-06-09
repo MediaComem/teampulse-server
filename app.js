@@ -353,7 +353,7 @@ var thirdFetch = {
 					v == "NaN" || v == null ? { [k]: '-' } : { [k]: v }
 				)))
 				// Convert array to json (for using only one document in mongodb)
-				.then(array => { return { "data-switch": array } })
+				.then(array => { return { "data": array } })
 				// Save in DB + JSON
 				.then(res => {
 					tools.writeJson("teampulse-switch", "json", res);
