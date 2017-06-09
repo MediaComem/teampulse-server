@@ -254,16 +254,15 @@ var socialFetch = {
 
 	youtube(url) {
 		var video = {};
+		var urlParsed = new URL(url);
+		var urlParams = urlParsed.searchParams;
 		video.id = regex.youtube.getID.exec(url);
+		video.list = urlParams.get('list');
 
 		// Playlist
-		if (video.id == null) {
+		if (video.list != null) {
 			var type = "youtube_playlist";
-			var urlParsed = new URL(url);
-			var urlParams = urlParsed.searchParams;
-
 			video.id = urlParams.get('v'); // if specific starting video is set otherwise: null
-			video.list = urlParams.get('list');
 		}
 		else {
 			var type = "youtube";
