@@ -192,9 +192,9 @@ var socialFetch = {
 		api_key: process.env.FLICKR_API_KEY,
 		secret: process.env.FLICKR_SECRET
 	},
-	flickr(url) {
+	flickr(photoset_url) {
 		var type = "flickr";
-		var urlParams = url.match(regex.flickr);
+		var urlParams = photoset_url.match(regex.flickr);
 
 		Flickr.tokenOnly(this.flickrOptions, (error, flickr) => {
 
@@ -209,7 +209,7 @@ var socialFetch = {
 			}
 
 			flickr.photosets.getPhotos({
-				user_id: lookupUser(url),
+				user_id: lookupUser(photoset_url),
 				photoset_id: urlParams[2],
 				page: 1,
 				per_page: 500
@@ -246,7 +246,10 @@ var socialFetch = {
 							date: Date.now(),
 							type: type,
 							data: {
-								photos
+								photos,
+								photoset:{
+									url: photoset_url
+								}
 							}
 						}
 					db.collection('favori').save(favoriSettings, (err, result) => {
