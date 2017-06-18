@@ -335,7 +335,7 @@ var thirdFetch = {
 					tools.writeJson("teampulse", "json", res)
 					db.collection('teampulse-data').save(Object.assign(res, {date:Date.now()}), (err, result) => {
 						if (err) return Promise.reject(err)
-						console.log('Teampulse saved to database')
+						console.log('Teampulse Data saved to database')
 						io.sockets.emit("teampulse", res);
 					})
 				})
@@ -362,7 +362,7 @@ var thirdFetch = {
 					tools.writeJson("teampulse-switch", "json", res);
 					db.collection('teampulse-switch').save(Object.assign(res, {date:Date.now()}), (err, result) => {
 						if (err) return Promise.reject(err)
-						console.log('Teampulse saved to database')
+						console.log('Teampulse Switch saved to database')
 						io.sockets.emit("teampulse-switch", res);
 					})
 				})
