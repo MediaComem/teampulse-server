@@ -247,7 +247,7 @@ var socialFetch = {
 							type: type,
 							data: {
 								photos,
-								photoset:{
+								photoset: {
 									url: photoset_url
 								}
 							}
@@ -310,7 +310,7 @@ var socialFetch = {
 var thirdFetch = {
 	init() {
 		console.log(`${new Date()} - ### Init ### Teampulse`);
-		//this.teampulse.base();
+		this.teampulse.base();
 		this.teampulse.switch();
 	},
 	update() {
@@ -360,10 +360,10 @@ var thirdFetch = {
 				// Save in DB + JSON
 				.then(res => {
 					tools.writeJson("teampulse-switch", "json", res);
-					db.collection('teampulse-data').save(res, (err, result) => {
+					db.collection('teampulse-switch').save(res, (err, result) => {
 						if (err) return Promise.reject(err)
 						console.log('Teampulse saved to database')
-						io.sockets.emit("teampulse", res);
+						io.sockets.emit("teampulse-switch", res);
 					})
 				})
 				.catch(err => {
@@ -394,11 +394,21 @@ var tools = {
 		return fetch(`https://maps.googleapis.com/maps/api/timezone/json?location=${d.latitude},${d.longitude}&timestamp=${curTimestampSec}&key=AIzaSyALdzBs07Buy7AoLoXR-29ax3M1D7YRSls`)
 			.then(res => res.json())
 			.then(res => {
-				return {
-					dstOffset: res.dstOffset,
-					rawOffset: res.rawOffset,
-					localTime: moment(curTimestamp).tz(res.timeZoneId).format(),
-					timeZoneId: res.timeZoneId
+				if (d.latitude != 0 && d.longitute != 0) {
+					return {
+						dstOffset: res.dstOffset,
+						rawOffset: res.rawOffset,
+						localTime: moment(curTimestamp).tz(res.timeZoneId).format(),
+						timeZoneId: res.timeZoneId
+					}
+				}
+				else{
+					return {
+						dstOffset: 0,
+						rawOffset: 0,
+						localTime: 0,
+						timeZoneId: 0
+					}
 				}
 			})
 			.catch(err => console.error(err));
