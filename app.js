@@ -351,10 +351,6 @@ var thirdFetch = {
 				.then(res => tools.isJSON(res) ? res : Promise.reject('JSON parsing error'))
 				// Retrieve and add localTime from location
 				.then(res => Promise.all(res.map(d => tools.localTime(d, d.date).then(resTime => Object.assign(d, resTime)))))
-				// Replace NaN and null values
-				.then(res => Object.assign(...Object.entries(res).map(([k, v]) =>
-					v == "NaN" || v == null ? { [k]: '-' } : { [k]: v }
-				)))
 				// Convert array to json (for using only one document in mongodb)
 				.then(array => { return { "data": array } })
 				// Save in DB + JSON
