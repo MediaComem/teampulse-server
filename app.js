@@ -310,7 +310,7 @@ var socialFetch = {
 var thirdFetch = {
 	init() {
 		console.log(`${new Date()} - ### Init ### Teampulse`);
-		this.teampulse.base();
+		//this.teampulse.base();
 		this.teampulse.switch();
 	},
 	update() {
@@ -322,7 +322,7 @@ var thirdFetch = {
 			fetch('https://data.teampulse.ch/raam/informations?minutes=1', { method: 'GET', timeout: 5000 }) // Return an object json
 				// Check connection and errors
 				.then(res => res.ok ? res.json() : Promise.reject(`${res.status} ${res.statusText}: ${res.url}`))
-				.then(res => res == "" || res == "No Data" ? res : Promise.reject('No Data'))
+				.then(res => res != "" || res != "No Data" ? res : Promise.reject('No Data'))
 				.then(res => tools.isJSON(res) ? res : Promise.reject('JSON parsing error'))
 				// Replace NaN and null values
 				.then(res => Object.assign(...Object.entries(res).map(([k, v]) =>
