@@ -515,7 +515,7 @@ thirdFetch.init();
 
 // Check update teampulse & social feeds feed every minute
 
-cron.schedule('* * * * *', () => {
+cron.schedule('*/15 * * * *', () => {
 	thirdFetch.update();
 	socialFetch.update();
 });
