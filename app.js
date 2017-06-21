@@ -53,7 +53,7 @@ const regex = {
 		getID: /(?:youtube\.com\/\S*(?:(?:\/e(?:mbed))?\/|watch\?(?:\S*?&?v\=))|youtu\.be\/)([a-zA-Z0-9_-]{6,11})/
 	},
 	facebook: {
-		video: /facebook.com\/[a-zA-Z0-9@_-]*\/videos/i
+		video: /facebook.com\/[a-zA-Z0-9@_-.]*\/videos/i
 	},
 	flickr: /\/photos\/([a-zA-Z0-9@_-]*)\/albums\/([0-9]*)/i
 }
